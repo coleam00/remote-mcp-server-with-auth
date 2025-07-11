@@ -7,7 +7,11 @@
     "dev": "wrangler dev",
     "start": "wrangler dev",
     "cf-typegen": "wrangler types",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest --config vitest.config.mjs",
+    "test:run": "vitest run --config vitest.config.mjs",
+    "test:ui": "vitest --ui --config vitest.config.mjs",
+    "test:coverage": "vitest run --coverage --config vitest.config.mjs"
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "^0.0.5",
@@ -22,9 +26,14 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.10",
+    "@vitest/ui": "^3.2.4",
+    "happy-dom": "^18.0.1",
+    "jsdom": "^26.1.0",
     "prettier": "^3.6.2",
     "typescript": "^5.8.3",
+    "vitest": "^3.2.4",
     "wrangler": "^4.23.0"
   }
 }

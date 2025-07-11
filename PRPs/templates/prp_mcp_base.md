@@ -87,7 +87,7 @@ Build a production-ready MCP (Model Context Protocol) server with:
 - docfile: PRPs/ai_docs/mcp_patterns.md
   why: Core MCP development patterns, security practices, and error handling
 
-# EXISTING CODEBASE PATTERNS - Study these implementations
+# EXISTING CODEBASE PATTERNS - Study these implementations as strong examples
 - file: src/index.ts
   why: Complete MCP server with authentication, database, and tools - MIRROR this pattern
 

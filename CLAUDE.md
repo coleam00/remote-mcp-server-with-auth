@@ -71,9 +71,9 @@ wrangler deploy --dry-run  # Test deployment without actually deploying
 wrangler types         # Generate TypeScript types from Worker configuration
 ```
 
-## Project Architecture
+## Project Architecture (For the Example MCP Implementation)
 
-**IMPORTANT: This is a Cloudflare Workers MCP server with GitHub OAuth authentication for secure database access.**
+**IMPORTANT: This is a Cloudflare Workers MCP server with GitHub OAuth authentication for secure database access - use this as an example for a production ready MCP.**
 
 ### Current Project Structure
 
@@ -101,7 +101,7 @@ wrangler types         # Generate TypeScript types from Worker configuration
 
 ### Key File Purposes (ALWAYS ADD NEW FILES HERE)
 
-**Main Implementation Files:**
+**Main Implementation Files (Including for the Example MCP Implementation):**
 
 - `src/index.ts` - Production MCP server with GitHub OAuth + PostgreSQL
 - `src/index_sentry.ts` - Same as above with Sentry monitoring integration
@@ -113,7 +113,7 @@ wrangler types         # Generate TypeScript types from Worker configuration
 - `src/workers-oauth-utils.ts` - HMAC-signed cookie approval system
 - `src/utils.ts` - OAuth token exchange and URL construction helpers
 
-**Database Integration:**
+**Database Integration (Including for the Example MCP Implementation):**
 
 - `src/database.ts` - PostgreSQL connection pooling, SQL validation, security
 
@@ -184,7 +184,7 @@ wrangler secret put SENTRY_DSN
 - **Durable Objects** - Stateful objects for MCP agent persistence
 - **KV Storage** - OAuth state and session management
 
-### MCP Server Architecture
+### MCP Server Architecture  (Based on the Example MCP Implementation)
 
 This project implements MCP servers as Cloudflare Workers with three main patterns:
 

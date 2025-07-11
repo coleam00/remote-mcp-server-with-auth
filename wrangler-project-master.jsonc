@@ -1,0 +1,54 @@
+/**
+ * Cloudflare Workers configuration for Project Master MCP Server
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "project-master-mcp",
+	"main": "src/project-master/index.ts",
+	"compatibility_date": "2025-03-10",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"migrations": [
+		{
+			"new_sqlite_classes": [
+				"ProjectMasterMCP"
+			],
+			"tag": "v1"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "ProjectMasterMCP",
+				"name": "MCP_OBJECT"
+			}
+		]
+	},
+	"kv_namespaces": [
+		{
+			"binding": "OAUTH_KV",
+			"id": "06998ca39ffb4273a10747065041347b"
+		}
+	],
+	"ai": {
+		"binding": "AI"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"dev": {
+		"port": 8792
+	}
+	/**
+	 * Note: Required environment variables:
+	 * - DATABASE_URL: PostgreSQL connection string
+	 * - GITHUB_CLIENT_ID: GitHub OAuth app client ID
+	 * - GITHUB_CLIENT_SECRET: GitHub OAuth app client secret
+	 * - COOKIE_ENCRYPTION_KEY: Key for cookie signing
+	 * - ANTHROPIC_API_KEY: API key for PRP parsing with Claude
+	 * Set these in .dev.vars for local development
+	 * Use wrangler secret put for production
+	 */
+}
