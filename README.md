@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/coleam00-remote-mcp-server-with-auth-badge.png)](https://mseep.ai/app/coleam00-remote-mcp-server-with-auth)
+
 # Cloudflare Remote PostgreSQL Database MCP Server + GitHub OAuth
 
 This is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server that enables you to **chat with your PostgreSQL database**, deployable as a remote MCP server with GitHub OAuth through Cloudflare. This is production ready MCP.
