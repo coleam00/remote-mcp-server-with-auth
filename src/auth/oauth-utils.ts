@@ -109,15 +109,33 @@ async function verifySignature(
 }
 
 /**
+ * Represents an approved client with authorization context.
+ */
+interface ApprovedClient {
+	clientId: string;
+	approvedAt: number;
+	scope: string[];
+}
+
+/**
+ * Maximum age (in ms) before a consent approval requires re-confirmation.
+ * Default: 7 days. After this period, the user will see the consent screen again.
+ */
+const CONSENT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
  * Parses the signed cookie and verifies its integrity.
+ * Supports both the new format (ApprovedClient[]) and legacy format (string[])
+ * for backward compatibility during migration.
+ *
  * @param cookieHeader - The value of the Cookie header from the request.
  * @param secret - The secret key used for signing.
- * @returns A promise resolving to the list of approved client IDs if the cookie is valid, otherwise null.
+ * @returns A promise resolving to the list of approved clients if the cookie is valid, otherwise null.
  */
 async function getApprovedClientsFromCookie(
 	cookieHeader: string | null,
 	secret: string,
-): Promise<string[] | null> {
+): Promise<ApprovedClient[] | null> {
 	if (!cookieHeader) return null;
 
 	const cookies = cookieHeader.split(";").map((c) => c.trim());
@@ -134,7 +152,7 @@ async function getApprovedClientsFromCookie(
 	}
 
 	const [signatureHex, base64Payload] = parts;
-	const payload = atob(base64Payload); // Assuming payload is base64 encoded JSON string
+	const payload = atob(base64Payload);
 
 	const key = await importKey(secret);
 	const isValid = await verifySignature(key, signatureHex, payload);
@@ -145,44 +163,75 @@ async function getApprovedClientsFromCookie(
 	}
 
 	try {
-		const approvedClients = JSON.parse(payload);
-		if (!Array.isArray(approvedClients)) {
+		const parsed = JSON.parse(payload);
+		if (!Array.isArray(parsed)) {
 			console.warn("Cookie payload is not an array.");
-			return null; // Payload isn't an array
-		}
-		// Ensure all elements are strings
-		if (!approvedClients.every((item) => typeof item === "string")) {
-			console.warn("Cookie payload contains non-string elements.");
 			return null;
 		}
-		return approvedClients as string[];
+
+		// Handle legacy format: string[] → convert to ApprovedClient[]
+		if (parsed.length > 0 && typeof parsed[0] === "string") {
+			return (parsed as string[]).map((clientId) => ({
+				clientId,
+				approvedAt: 0, // Unknown — will require re-consent due to age check
+				scope: [],
+			}));
+		}
+
+		// New format: ApprovedClient[]
+		return parsed as ApprovedClient[];
 	} catch (e) {
 		console.error("Error parsing cookie payload:", e);
-		return null; // JSON parsing failed
+		return null;
 	}
 }
 
 // --- Exported Functions ---
 
 /**
- * Checks if a given client ID has already been approved by the user,
- * based on a signed cookie.
+ * Checks if a given client ID has already been approved by the user
+ * with compatible scope and within the consent validity period.
+ *
+ * The approval cookie now stores the full authorization context (clientId,
+ * scope, timestamp). Consent is only skipped when ALL of:
+ * - The client ID matches a previously approved client
+ * - All requested scopes were previously approved
+ * - The approval is within CONSENT_MAX_AGE_MS (default: 7 days)
  *
  * @param request - The incoming Request object to read cookies from.
  * @param clientId - The OAuth client ID to check approval for.
+ * @param requestedScope - The scopes being requested in this authorization.
  * @param cookieSecret - The secret key used to sign/verify the approval cookie.
- * @returns A promise resolving to true if the client ID is in the list of approved clients in a valid cookie, false otherwise.
+ * @returns A promise resolving to true if consent can be skipped, false otherwise.
  */
 export async function clientIdAlreadyApproved(
 	request: Request,
 	clientId: string,
 	cookieSecret: string,
+	requestedScope: string[] = [],
 ): Promise<boolean> {
 	if (!clientId) return false;
 	const cookieHeader = request.headers.get("Cookie");
 	const approvedClients = await getApprovedClientsFromCookie(cookieHeader, cookieSecret);
+	if (!approvedClients) return false;
 
-	return approvedClients?.includes(clientId) ?? false;
+	const match = approvedClients.find((a) => a.clientId === clientId);
+	if (!match) return false;
+
+	// Check consent age — require re-consent after CONSENT_MAX_AGE_MS
+	if (match.approvedAt > 0 && Date.now() - match.approvedAt > CONSENT_MAX_AGE_MS) {
+		return false;
+	}
+
+	// Check scope — only skip consent if all requested scopes were previously approved
+	if (requestedScope.length > 0 && match.scope.length > 0) {
+		const approvedScopeSet = new Set(match.scope);
+		if (!requestedScope.every((s) => approvedScopeSet.has(s))) {
+			return false; // New scopes requested — require re-consent
+		}
+	}
+
+	return true;
 }
 
 
@@ -570,8 +619,19 @@ export async function parseRedirectApproval(
 	const existingApprovedClients =
 		(await getApprovedClientsFromCookie(cookieHeader, cookieSecret)) || [];
 
-	// Add the newly approved client ID (avoid duplicates)
-	const updatedApprovedClients = Array.from(new Set([...existingApprovedClients, clientId]));
+	// Extract scope from the authorization request state
+	const scope: string[] = state?.oauthReqInfo?.scope || [];
+
+	// Add or update the approved client with full context
+	const now = Date.now();
+	const updatedApprovedClients = existingApprovedClients.filter(
+		(a) => a.clientId !== clientId,
+	);
+	updatedApprovedClients.push({
+		clientId,
+		approvedAt: now,
+		scope,
+	});
 
 	// Sign the updated list
 	const payload = JSON.stringify(updatedApprovedClients);
