@@ -1,0 +1,30 @@
+# Optional MCP security scan — soft-gated so it never blocks merges on first run.
+# Scanner: https://github.com/SyedAnas01/mcp-safeguard (Black Hat Europe Arsenal 2026)
+name: MCP Security Scan
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  mcp-safeguard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan MCP server source
+        uses: SyedAnas01/mcp-safeguard@v0.9.6
+        with:
+          mode: scan-source
+          path: .
+          fail-on: HIGH
+          format: sarif
+          output: mcp-safeguard-results.sarif
+          continue-on-error: 'true'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcp-safeguard-sarif
+          path: mcp-safeguard-results.sarif
+          if-no-files-found: ignore
